@@ -30,52 +30,6 @@ export class LambdaWithLayer extends Stack {
 
     s3Bucket.grantRead(new iam.AccountRootPrincipal());
     s3Bucket.grantPut(new iam.AccountRootPrincipal());
-
-    //IAM policy document for cloudwatch permissions.
-    const LogsWritePolicy = new iam.PolicyDocument({
-      statements: [new iam.PolicyStatement({
-        actions: [
-          'logs:CreateLogGroup',
-          'logs:CreateLogStream',
-          'logs:PutLogEvents',
-        ],
-        resources: ['*'],
-      }),
-      new iam.PolicyStatement({
-        actions: [
-          'sts:AssumeRole',
-        ],
-        resources: [s3PreSignRole.roleArn],
-      })],
-    });
-
-
-    //IAM Lambda Execution custom role 
-    const LambdaExecRole = new iam.Role(this, 'LambdaExecRole', {
-      assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
-      description: 'Lambda Execution Role',
-      inlinePolicies: { LogsWritePolicy }
-    });
-
-
-    //IAM policy document for s3 Read write role.
-    const s3rwRolePolicies = new iam.PolicyDocument({
-      statements: [new iam.PolicyStatement({
-        actions: [
-          's3:GetObject',
-          's3:PutObject',
-        ],
-        resources: [s3Bucket.bucketArn+'/*'],
-      })],
-    });
-
-
-    //IAM PreSign Assume Role
-    const s3PreSignRole = new iam.Role(this, 's3PreSignRole', {
-      assumedBy: new iam.ArnPrincipal(LambdaExecRole.roleArn),
-      description: 'Lambda Execution Role',
-      inlinePolicies: { s3rwRolePolicies }
-    });
       
     const apigw = new apigateway.RestApi(this, 'apigw', {
     /* endpointTypes: [apigateway.EndpointType.PRIVATE]
