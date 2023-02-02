@@ -1,19 +1,15 @@
-# This is a basic workflow to help you get started with Actions
-
 name: build pipeline
 on:
   push:
     branches:
-    - master
+    - main
   # Manually trigger from Actions tab
   workflow_dispatch:
 
 env:
-  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  TF_VAR_aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  TF_VAR_aws_secret_id: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  AWS_DEFAULT_REGION:  ${{ secrets.AWS_DEFAULT_REGION }}
+  AWS_ACCESS_KEY_ID: ${{ secrets.A_KEY }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.S_KEY }}
+  AWS_DEFAULT_REGION: "us-east-1"
   APPNAME: ${{ secrets.APPNAME }}
   ENVNAME: ${{ secrets.ENVNAME }}
   GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
@@ -31,19 +27,17 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v3
-      - name: Set up Python 3.8
-        uses: actions/setup-python@v1
-        with:
-          python-version: 3.8
-      #- name: Test with Checkov
-      #  id: checkov
-      #  uses: bridgecrewio/checkov-action@master
-      #  with:
-      #    directory: ./
-      #    framework: terraform 
-      - name: Set remote path
-        run: sh tfremote.sh
-      - name: Terraform init
-        run: terraform init -input=false
-      - name: Terraform apply
-        run: terraform apply -auto-approve -input=false
+      - name: Check aws cli
+        run: aws --version && aws sts get-caller-identity --query Account --output text
+      - name: update npm package
+        run: npm install -g npm@9.3.1
+      - name: install aws cdk package
+        run: npm install -g aws-cdk && cdk --version
+      - name: Check running versions
+        run: echo "node:$(node --version), cdk:$(cdk --version), typescript:$(tsc --version)"
+      - name: Create temp directories
+        run: mkdir build
+      - name: cdk init
+        run: cd build && cdk init --language=typescript && rm -rf bin lib && cp -r ../bin .;cp -r ../lib .;cp -r ../src .
+      - name: cdk synth
+        run: cdk synth
