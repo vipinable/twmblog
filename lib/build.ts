@@ -52,7 +52,6 @@ export class LambdaWithLayer extends Stack {
         APPNAME: process.env.ApplicationName!,
         ENVNAME: process.env.Environment!,
         APIURL: `https://${apigw.restApiId}.execute-api.${this.region}.amazonaws.com/`,
-        S3ROLE: s3PreSignRole.roleArn,
         BUCKET: s3Bucket.bucketName
       },
       }); 
@@ -63,11 +62,7 @@ export class LambdaWithLayer extends Stack {
 
     //Attach assume role policies to lambda function
     apigwbe.role?.attachInlinePolicy(new iam.Policy(this, 'CustomAssumeRole', {
-      statements: [new iam.PolicyStatement(
-        {
-        actions: ['sts:AssumeRole'],
-        resources: [s3PreSignRole.roleArn],
-        }),
+      statements: [
         new iam.PolicyStatement({
           actions: [
             's3:*'          
