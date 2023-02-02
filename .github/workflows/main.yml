@@ -40,4 +40,4 @@ jobs:
       - name: cdk init
         run: cd build && cdk init --language=typescript && rm -rf bin lib && cp -r ../bin .;cp -r ../lib .;cp -r ../src .
       - name: cdk synth
-        run: cdk synth
+        run: cd build && cdk synth
