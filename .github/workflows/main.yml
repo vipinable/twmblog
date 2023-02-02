@@ -13,6 +13,7 @@ env:
   APPNAME: ${{ secrets.APPNAME }}
   ENVNAME: ${{ secrets.ENVNAME }}
   GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+  StackName: ${{ secrets.APPNAME }}-${{ secrets.ENVNAME }}
   
 jobs:
   build:
