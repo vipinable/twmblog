@@ -1,0 +1,104 @@
+:root {
+  --bg: #fafafa;
+  --surface: #ffffff;
+  --text: #1a1a1a;
+  --muted: #6b7280;
+  --accent: #2563eb;
+  --border: #e5e7eb;
+  --max-w: 720px;
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.7;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Nav */
+header {
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+nav {
+  max-width: var(--max-w);
+  margin: 0 auto;
+  padding: 1rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.site-name {
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.nav-links { display: flex; gap: 1.5rem; }
+.nav-links a { color: var(--muted); text-decoration: none; font-size: 0.9rem; }
+.nav-links a:hover { color: var(--text); }
+
+/* Main */
+main {
+  flex: 1;
+  max-width: var(--max-w);
+  margin: 0 auto;
+  padding: 3rem 1.5rem;
+  width: 100%;
+}
+
+/* Hero */
+.hero { margin-bottom: 3rem; }
+.hero h1 { font-size: 2rem; font-weight: 800; line-height: 1.2; margin-bottom: 0.75rem; }
+.hero p { color: var(--muted); font-size: 1.05rem; }
+
+/* Post cards */
+.posts { display: flex; flex-direction: column; gap: 2rem; }
+
+.post-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.5rem;
+  background: var(--surface);
+}
+
+.post-card time {
+  font-size: 0.8rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.post-card h2 { font-size: 1.25rem; margin: 0.4rem 0 0.6rem; }
+.post-card h2 a { color: var(--text); text-decoration: none; }
+.post-card h2 a:hover { color: var(--accent); }
+.post-card p { color: var(--muted); font-size: 0.95rem; margin-bottom: 1rem; }
+
+.read-more { color: var(--accent); text-decoration: none; font-size: 0.9rem; font-weight: 500; }
+.read-more:hover { text-decoration: underline; }
+
+/* Page content */
+.page-content h1 { font-size: 2rem; margin-bottom: 1.25rem; }
+.page-content p { color: var(--muted); margin-bottom: 1rem; }
+.page-content a { color: var(--accent); }
+
+/* Footer */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 1.5rem;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--muted);
+}

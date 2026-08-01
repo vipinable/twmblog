@@ -1,0 +1,63 @@
+name: Deploy Blog
+
+# Deploys the static blog to S3 + CloudFront via AWS CDK.
+#
+# Triggers:
+#   - Push to main branch
+#   - Manual run from Actions tab
+#
+# Required secrets (Settings → Environments → prod):
+#   A_KEY        AWS access key ID
+#   S_KEY        AWS secret access key
+#
+# Optional vars (Settings → Environments → prod):
+#   APP_NAME     Stack name prefix  (default: twmblog)
+#   CF_DOMAIN    Custom domain      (e.g. vipin.is-a.dev)
+#   CF_CERT_ARN  ACM cert ARN for CF_DOMAIN (must be in us-east-1)
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  AWS_ACCESS_KEY_ID: ${{ secrets.A_KEY }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.S_KEY }}
+  AWS_DEFAULT_REGION: us-east-1
+  APP_NAME: ${{ vars.APP_NAME || 'twmblog' }}
+  ENV_NAME: prod
+
+jobs:
+  deploy:
+    name: Deploy — us-east-1
+    runs-on: ubuntu-latest
+    environment: prod
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Check AWS credentials
+        run: aws sts get-caller-identity --query Account --output text
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install aws-cdk
+        run: npm install -g aws-cdk && cdk --version
+
+      - name: CDK synth
+        run: npx tsc --noEmit && cdk synth
+
+      - name: CDK deploy
+        env:
+          CF_DOMAIN: ${{ vars.CF_DOMAIN }}
+          CF_CERT_ARN: ${{ vars.CF_CERT_ARN }}
+        run: |
+          CDK_CONTEXT=""
+          [ -n "$CF_DOMAIN" ] && [ -n "$CF_CERT_ARN" ] && \
+            CDK_CONTEXT="-c cfDomain=$CF_DOMAIN -c cfCertArn=$CF_CERT_ARN"
+          cdk deploy --require-approval never $CDK_CONTEXT
