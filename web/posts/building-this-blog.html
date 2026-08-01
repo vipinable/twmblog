@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>How I Built This Blog · Vipin's Blog</title>
+  <link rel="stylesheet" href="../style.css">
+  <style>
+    .post-header { margin-bottom: 2.5rem; }
+    .post-header h1 { font-size: 2.2rem; line-height: 1.2; margin-bottom: 0.75rem; }
+    .post-meta { color: var(--muted); font-size: 0.9rem; display: flex; gap: 1rem; flex-wrap: wrap; }
+    .post-body { font-size: 1.05rem; }
+    .post-body h2 { font-size: 1.3rem; margin: 2.5rem 0 0.75rem; }
+    .post-body p { margin-bottom: 1.1rem; color: #374151; }
+    .post-body ul, .post-body ol { margin: 0 0 1.1rem 1.5rem; color: #374151; }
+    .post-body li { margin-bottom: 0.4rem; }
+    .post-body a { color: var(--accent); }
+    .post-body code {
+      background: #f3f4f6;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 0.15em 0.4em;
+      font-size: 0.88em;
+      font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+    }
+    .post-body pre {
+      background: #1e293b;
+      color: #e2e8f0;
+      border-radius: 8px;
+      padding: 1.25rem 1.5rem;
+      overflow-x: auto;
+      margin-bottom: 1.25rem;
+      font-size: 0.88rem;
+      line-height: 1.6;
+    }
+    .post-body pre code {
+      background: none;
+      border: none;
+      padding: 0;
+      font-size: inherit;
+      color: inherit;
+    }
+    .post-body .callout {
+      border-left: 3px solid var(--accent);
+      background: #eff6ff;
+      padding: 1rem 1.25rem;
+      border-radius: 0 6px 6px 0;
+      margin-bottom: 1.25rem;
+    }
+    .post-body .callout p { margin: 0; color: #1e40af; }
+    .divider { border: none; border-top: 1px solid var(--border); margin: 3rem 0; }
+    .back-link { display: inline-block; margin-bottom: 2rem; color: var(--muted); text-decoration: none; font-size: 0.9rem; }
+    .back-link:hover { color: var(--text); }
+  </style>
+</head>
+<body>
+  <header>
+    <nav>
+      <a href="/" class="site-name">Vipin's Blog</a>
+      <div class="nav-links">
+        <a href="/">Posts</a>
+        <a href="/about.html">About</a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <a href="/" class="back-link">← All posts</a>
+
+    <article>
+      <div class="post-header">
+        <h1>How I Built This Blog on AWS for Free</h1>
+        <div class="post-meta">
+          <time datetime="2026-08-01">August 1, 2026</time>
+          <span>·</span>
+          <span>5 min read</span>
+        </div>
+      </div>
+
+      <div class="post-body">
+        <p>
+          I've been meaning to set up a personal blog for a while. Not a Medium account,
+          not a Substack — something I own and control. This weekend I finally did it,
+          and it turned out simpler than I expected. Here's exactly how it's built.
+        </p>
+
+        <h2>The goal</h2>
+        <p>
+          A fast, cheap static blog deployed on AWS. No servers to manage, no runtime to
+          babysit. Push a file to GitHub, the site updates itself. I already had AWS
+          infrastructure experience from other projects, so I wanted to reuse the same
+          tooling: <strong>AWS CDK</strong> for infra and <strong>GitHub Actions</strong>
+          for the deploy pipeline.
+        </p>
+
+        <h2>The stack</h2>
+        <ul>
+          <li><strong>S3</strong> — stores the static HTML/CSS files. Private bucket, not publicly accessible.</li>
+          <li><strong>CloudFront</strong> — CDN that sits in front of S3. Handles HTTPS, caching, and serves the site globally. This is the only thing the public touches.</li>
+          <li><strong>Origin Access Control (OAC)</strong> — CloudFront gets a signed identity to read from S3. The bucket itself stays locked.</li>
+          <li><strong>AWS CDK (TypeScript)</strong> — defines all of the above as code. No clicking around in the console.</li>
+          <li><strong>GitHub Actions</strong> — push to <code>main</code> → deploy. That's the whole pipeline.</li>
+        </ul>
+
+        <div class="callout">
+          <p>Running cost: near zero. S3 storage for a few HTML files is fractions of a cent. CloudFront's free tier covers 1TB of data transfer and 10 million requests per month — more than enough for a personal blog.</p>
+        </div>
+
+        <h2>The CDK stack</h2>
+        <p>
+          The entire infrastructure is defined in a single TypeScript file —
+          <code>lib/blog-stack.ts</code>. It creates the S3 bucket, the CloudFront
+          distribution, and deploys the <code>web/</code> folder to S3 on every CDK deploy.
+        </p>
+
+        <pre><code>const siteBucket = new s3.Bucket(this, 'SiteBucket', {
+  blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+  encryption: s3.BucketEncryption.S3_MANAGED,
+  enforceSSL: true,
+  removalPolicy: RemovalPolicy.DESTROY,
+  autoDeleteObjects: true,
+});
+
+const distribution = new cloudfront.Distribution(this, 'Distribution', {
+  defaultRootObject: 'index.html',
+  defaultBehavior: {
+    origin: origins.S3BucketOrigin.withOriginAccessControl(siteBucket),
+    viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+    cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
+    compress: true,
+  },
+});</code></pre>
+
+        <p>
+          CDK also handles deploying the static files to S3 and invalidating the
+          CloudFront cache — so changes go live immediately after a deploy, no manual steps.
+        </p>
+
+        <h2>The deploy pipeline</h2>
+        <p>
+          The GitHub Actions workflow is straightforward. On every push to <code>main</code>:
+        </p>
+        <ol>
+          <li>Check out the repo</li>
+          <li>Verify AWS credentials</li>
+          <li>Run <code>npm install</code> to get CDK and its deps</li>
+          <li>Run <code>cdk synth</code> to type-check and generate the CloudFormation template</li>
+          <li>Run <code>cdk deploy</code> — this uploads any changed files to S3 and updates the CloudFront distribution if needed</li>
+        </ol>
+        <p>
+          AWS credentials live in GitHub's environment secrets (<code>A_KEY</code> and
+          <code>S_KEY</code>). The workflow reads them, and CDK uses the standard AWS SDK
+          credential chain to pick them up. No third-party actions needed for auth.
+        </p>
+
+        <h2>Writing posts</h2>
+        <p>
+          Right now posts are plain HTML files in <code>web/posts/</code>. It's low-tech
+          but it works — I control every pixel, there's no build step, and the files load
+          instantly. I'll probably add a lightweight Markdown-to-HTML step later if the
+          number of posts grows, but for now this is fine.
+        </p>
+        <p>
+          To publish: write an HTML file, add a link to it on the homepage, push to
+          <code>main</code>. Done in under a minute.
+        </p>
+
+        <h2>Custom domain (coming soon)</h2>
+        <p>
+          The site is currently on a CloudFront URL (<code>*.cloudfront.net</code>).
+          I'm registering a free subdomain at
+          <a href="https://github.com/is-a-dev/register" target="_blank" rel="noopener">is-a.dev</a>
+          — a free developer subdomain service. Once that's set up, I'll issue an ACM
+          certificate in <code>us-east-1</code> (required for CloudFront), add it to the
+          CDK stack via context variables, and point the CNAME. The CDK stack already
+          has this wired in, just waiting on the domain.
+        </p>
+
+        <h2>What I'd do differently</h2>
+        <p>
+          Nothing major. If I were building this for a team or expecting serious traffic,
+          I'd add a staging environment and tag-based deploys (like I do in my other
+          projects). For a personal blog, pushing to main is fine.
+        </p>
+        <p>
+          The whole thing — from idea to live site — took a couple of hours, most of
+          which was the CDK boilerplate. The actual deploy pipeline ran first time without
+          errors. AWS CDK remains my favourite way to define cloud infrastructure: it's
+          just TypeScript, the constructs compose cleanly, and you get real type checking
+          instead of hoping your YAML is valid.
+        </p>
+
+        <hr class="divider">
+
+        <p style="color:var(--muted);font-size:0.95rem;">
+          The full source is at
+          <a href="https://github.com/vipinable/twmblog" target="_blank" rel="noopener">github.com/vipinable/twmblog</a>
+          if you want to clone and adapt it.
+        </p>
+      </div>
+    </article>
+  </main>
+
+  <footer>
+    <p>Built by Vipin · Deployed on AWS</p>
+  </footer>
+</body>
+</html>
